@@ -1,7 +1,7 @@
-#CoSMIG
+# CoSMIG
 Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction
 
-![alt text](https://github.com/biomed-AI/CoSMIG/raw/master/framework.jpg "Illustration of CoSMIG")
+![alt text](https://github.com/Jh-SYSU/CoSMIG/blob/main/framework.jpg "Illustration of CoSMIG")
 
 
 This is the standalone code for our paper: [Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction]()
@@ -24,7 +24,7 @@ Also you can  install the required packages follow there instructions (tested on
 
 ## Datasets
 
-Data (from DrugBank and DGIdb) could be download from [here](https://github.com/biomed-AI/CoSMIG/raw/master/data)
+Data (from DrugBank and DGIdb) could be download from [here](https://github.com/Jh-SYSU/CoSMIG/tree/main/data)
 
 ### Statistic of DGI Dataset
 |Dataset|DrugBank|DGIdb|
