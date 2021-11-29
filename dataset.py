@@ -269,6 +269,11 @@ def subgraph_extraction_labeling(ind, Arow, Acol, h=1, sample_ratio=1.0, max_nod
     v += len(u_nodes)
     r = r - 1  # transform r back to rating label
     # print(onehot_encoding(list(mlb.classes_),r))
+    if max(r) == 1:
+        newr = [float(i) if i == 1 else -1 for i in r]
+        attr = mlb.transform(newr).astype(dtype=np.int8)
+    else:
+        attr = mlb.transform(r).astype(dtype=np.int8)
     num_nodes = len(u_nodes) + len(v_nodes)
     node_labels = [x*2 for x in u_dist] + [x*2+1 for x in v_dist]
     max_node_label = 2*h + 1
@@ -302,17 +307,19 @@ def subgraph_extraction_labeling(ind, Arow, Acol, h=1, sample_ratio=1.0, max_nod
         if u_features is not None and v_features is not None:
             node_features = [u_features[0], v_features[0]]
             
-    return u, v, r, node_labels, max_node_label, y, node_features
+    return u, v, r, node_labels, max_node_label, y, node_features, attr
 
 
-def construct_pyg_graph(u, v, r, node_labels, max_node_label, y, node_features):
+def construct_pyg_graph(u, v, r, node_labels, max_node_label, y, node_features, attr):
     u, v = torch.LongTensor(u), torch.LongTensor(v)
     r = torch.LongTensor(r)
     edge_index = torch.stack([torch.cat([u, v]), torch.cat([v, u])], 0)
     edge_type = torch.cat([r, r])
+    attr = torch.FloatTensor(attr)
+    edge_attr = torch.cat([attr, attr], dim=0)
     x = torch.FloatTensor(one_hot(node_labels, max_node_label+1))
     y = torch.FloatTensor([y])
-    data = Data(x, edge_index, edge_type=edge_type, y=y)
+    data = Data(x, edge_index, edge_type=edge_type, edge_attr=edge_attr, y=y)
 
     if node_features is not None:
         if type(node_features) == list:  # a list of u_feature and v_feature

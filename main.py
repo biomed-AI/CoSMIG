@@ -36,10 +36,10 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 warnings.showwarning = warn_with_traceback
 
 def logger(info, model, optimizer):
-    epoch, train_loss, test_rmse = info['epoch'], info['train_loss'], info['test_rmse']
+    epoch, train_loss, test_metric = info['epoch'], info['train_loss'], info['test_metric']
     with open(os.path.join(args.res_dir, 'log.txt'), 'a') as f:
-        f.write('Epoch {}, train loss {:.4f}, test rmse {:.6f}\n'.format(
-            epoch, train_loss, test_rmse))
+        f.write('Epoch {}, train loss {:.4f}, test metric {:.6f}\n'.format(
+            epoch, train_loss, test_metric))
     if type(epoch) == int and epoch % args.save_interval == 0:
         print('Saving model states...')
         model_name = os.path.join(args.res_dir, 'model_checkpoint{}.pth'.format(epoch))
@@ -52,7 +52,6 @@ def logger(info, model, optimizer):
             torch.save(optimizer.state_dict(), optimizer_name)
 
 args = get_basic_configs()
-
 args.nums = 25
 
 rating_map, post_rating_map = None, None
@@ -290,17 +289,6 @@ model = CoSMIG(
     multiply_by=multiply_by
 )
 
-# args.ARR = 0.0
-# model = CoSMIG(
-#     train_graphs,
-#     hidden_channels=args.hidden,
-#     bias=False,
-#     regression=True,
-#     dropout=args.adj_dropout,
-#     side_features=args.use_features,
-#     n_side_features=n_features,
-#     multiply_by=multiply_by
-# )
 
 if not args.no_train:
     train_multiple_epochs(
@@ -389,7 +377,7 @@ if args.visualize:
     )
 
 if args.probe:
-    if True:
+    if args.ensemble:
 
         start_epoch, end_epoch, interval = args.epochs-30, args.epochs, 10
 
@@ -401,7 +389,7 @@ if args.probe:
             start_epoch, end_epoch, interval
         )
 
-        if True and checkpoints:
+        if args.ensemble and checkpoints:
             predict(
                 model=model,
                 graphs=probe_graph,
@@ -434,7 +422,7 @@ if args.probe:
                 sort_by='prediction'
             )
 
-if True:
+if args.ensemble:
     start_epoch, end_epoch, interval = args.epochs-30, args.epochs, 10
 
     checkpoints = [
@@ -445,7 +433,7 @@ if True:
         start_epoch, end_epoch, interval
     )
 
-    rmse = test_once(
+    test_metric = test_once(
         test_graphs, 
         model, 
         args.batch_size, 
@@ -453,12 +441,12 @@ if True:
         ensemble=True, 
         checkpoints=checkpoints
     )
-    print('Ensemble test rmse is: {:.6f}'.format(rmse))
+    print('Ensemble test metric is: {:.6f}'.format(test_metric))
 
 
     eval_info = {
         'epoch': epoch_info,
         'train_loss': 0,
-        'test_rmse': rmse,
+        'test_metric': test_metric,
     }
     logger(eval_info, None, None)

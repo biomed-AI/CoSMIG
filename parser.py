@@ -7,7 +7,7 @@ import numpy as np
 def get_basic_configs():
 
     # Arguments
-    parser = argparse.ArgumentParser(description='CoSMIG')
+    parser = argparse.ArgumentParser(description='Inductive Graph-based Matrix Completion')
     # general settings
     parser.add_argument('--testing', action='store_true', default=False,
                         help='if set, use testing mode which splits all ratings into train/test;\

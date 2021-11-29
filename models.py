@@ -7,7 +7,6 @@ from torch.nn import Linear, Conv1d
 from torch_geometric.nn import MessagePassing, GCNConv, RGCNConv, global_sort_pool, global_add_pool
 from torch_geometric.utils import dropout_adj
 from dataset import *
-from layers import *
 import pdb
 import time
 

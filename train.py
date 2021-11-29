@@ -13,6 +13,7 @@ from torch.optim import Adam
 from sklearn.model_selection import StratifiedKFold
 from torch_geometric.data import DataLoader, DenseDataLoader as DenseLoader
 from tqdm import tqdm
+from sklearn.metrics import accuracy_score
 import pdb
 import matplotlib
 matplotlib.use("Agg")
@@ -37,7 +38,7 @@ def train_multiple_epochs(train_dataset,
                           continue_from=None, 
                           res_dir=None):
 
-    rmses = []
+    metrics = []
 
     if train_dataset.__class__.__name__ == 'MyDynamicDataset':
         num_workers = mp.cpu_count()
@@ -78,20 +79,20 @@ def train_multiple_epochs(train_dataset,
         train_loss = train(model, optimizer, train_loader, device, regression=True, ARR=ARR, 
                            show_progress=batch_pbar, epoch=epoch)
         if epoch % test_freq == 0:
-            rmses.append(eval_rmse(model, test_loader, device, show_progress=batch_pbar))
+            metrics.append(eval_metric(model, test_loader, device, show_progress=batch_pbar))
         else:
-            rmses.append(np.nan)
+            metrics.append(np.nan)
         eval_info = {
             'epoch': epoch,
             'train_loss': train_loss,
-            'test_rmse': rmses[-1],
+            'test_metric': metrics[-1],
         }
         if not batch_pbar:
             pbar.set_description(
-                'Epoch {}, train loss {:.6f}, test rmse {:.6f}'.format(*eval_info.values())
+                'Epoch {}, train loss {:.6f}, test metric {:.6f}'.format(*eval_info.values())
             )
         else:
-            print('Epoch {}, train loss {:.6f}, test rmse {:.6f}'.format(*eval_info.values()))
+            print('Epoch {}, train loss {:.6f}, test metric {:.6f}'.format(*eval_info.values()))
 
         if epoch % lr_decay_step_size == 0:
             for param_group in optimizer.param_groups:
@@ -103,14 +104,14 @@ def train_multiple_epochs(train_dataset,
     if torch.cuda.is_available():
         torch.cuda.synchronize()
 
-    t_end = time.perf_counter()
-    duration = t_end - t_start
+    # t_end = time.perf_counter()
+    # duration = t_end - t_start
 
-    print('Final Test RMSE: {:.6f}, Duration: {:.6f}'.
-          format(rmses[-1],
-                 duration))
+    # print('Final Test Metric: {:.6f}, Duration: {:.6f}'.
+    #       format(metrics[-1],
+    #              duration))
 
-    return rmses[-1]
+    return metrics[-1]
 
 
 def test_once(test_dataset,
@@ -124,21 +125,21 @@ def test_once(test_dataset,
     model.to(device)
     t_start = time.perf_counter()
     if ensemble and checkpoints:
-        rmse = eval_rmse_ensemble(model, checkpoints, test_loader, device, show_progress=True)
+        metric = eval_metric_ensemble(model, checkpoints, test_loader, device, show_progress=True)
     else:
-        rmse = eval_rmse(model, test_loader, device, show_progress=True)
+        metric = eval_metric(model, test_loader, device, show_progress=True)
     t_end = time.perf_counter()
     duration = t_end - t_start
-    print('Test Once RMSE: {:.6f}, Duration: {:.6f}'.format(rmse, duration))
+    print('Test Once Metric: {:.6f}, Duration: {:.6f}'.format(metric, duration))
     epoch_info = 'test_once' if not ensemble else 'ensemble'
     eval_info = {
         'epoch': epoch_info,
         'train_loss': 0,
-        'test_rmse': rmse,
+        'test_metric': metric,
         }
     if logger is not None:
         logger(eval_info, None, None)
-    return rmse
+    return metric
 
 
 def num_graphs(data):
@@ -180,6 +181,8 @@ def train(model, optimizer, loader, device, regression=False, ARR=0,
         torch.cuda.empty_cache()
     return total_loss / len(loader.dataset)
 
+def ceil(y_preds):
+    return -1 if y_preds < 0 else 1
 
 def eval_loss(model, loader, device, regression=False, show_progress=False):
     model.eval()
@@ -189,27 +192,48 @@ def eval_loss(model, loader, device, regression=False, show_progress=False):
         pbar = tqdm(loader)
     else:
         pbar = loader
+
+    Rs = []
+    Ys = []
     for data in pbar:
         data = data.to(device)
         with torch.no_grad():
             out = model(data)
+
+        y = data.y
+        Rs.extend(out.detach().view(-1).tolist())
+        Ys.extend(y.view(-1).tolist())
+
         if regression:
             loss += F.mse_loss(out, data.y.view(-1), reduction='sum').item()
         else:
             loss += F.nll_loss(out, data.y.view(-1), reduction='sum').item()
         torch.cuda.empty_cache()
-    return loss / len(loader.dataset)
 
 
-def eval_rmse(model, loader, device, show_progress=False):
-    mse_loss = eval_loss(model, loader, device, True, show_progress)
-    rmse = math.sqrt(mse_loss)
-    return rmse
+    if regression:
+        func = round if max(Ys) > 2 else ceil
+        R = [func(i) for i in Rs]
+        Y = [int(i) for i in Ys]
+        metric = accuracy_score(Y, R)
+        return metric
+    else:
+        return loss / len(loader.dataset)
+
+
+def eval_metric(model, loader, device, show_regression=False, show_progress=False):
+    loss = eval_loss(model, loader, device, True, show_progress)
+    if show_regression:
+        rmse = math.sqrt(loss)
+        return rmse
+    else:
+        return loss
 
 
 def eval_loss_ensemble(model, checkpoints, loader, device, regression=False, show_progress=False):
     loss = 0
     Outs = []
+    ys = []
     for i, checkpoint in enumerate(checkpoints):
         if show_progress:
             print('Testing begins...')
@@ -219,8 +243,6 @@ def eval_loss_ensemble(model, checkpoints, loader, device, regression=False, sho
         model.load_state_dict(torch.load(checkpoint))
         model.eval()
         outs = []
-        if i == 0:
-            ys = []
         for data in pbar:
             data = data.to(device)
             if i == 0:
@@ -238,13 +260,25 @@ def eval_loss_ensemble(model, checkpoints, loader, device, regression=False, sho
     else:
         loss += F.nll_loss(Outs, ys, reduction='sum').item()
     torch.cuda.empty_cache()
-    return loss / len(loader.dataset)
+    # return loss / len(loader.dataset)
+
+    if regression:
+        R = [round(i) for i in Outs]
+        Y = [int(i) for i in ys]
+        metric = accuracy_score(Y, R)
+        return metric
+    else:
+        return loss / len(loader.dataset)
 
 
-def eval_rmse_ensemble(model, checkpoints, loader, device, show_progress=False):
-    mse_loss = eval_loss_ensemble(model, checkpoints, loader, device, True, show_progress)
-    rmse = math.sqrt(mse_loss)
-    return rmse
+
+def eval_metric_ensemble(model, checkpoints, loader, device, show_regression=False, show_progress=False):
+    loss = eval_loss_ensemble(model, checkpoints, loader, device, True, show_progress)
+    if show_regression:
+        rmse = math.sqrt(loss)
+        return rmse
+    else:
+        return loss
 
 
 def predict(model, graphs, res_dir, data_name, class_values, checkpoints=None, ensemble=False, num=20, sort_by='prediction'):
@@ -312,9 +346,23 @@ def save_test_results(model, graphs, res_dir, data_name, mode='test'):
     res_path = os.path.join(res_dir, f"{mode}_predictions_{data_name}.csv")
     res.to_csv(res_path, index=False)
 
+
+    def get_preds(row):
+        if data_name == 'DGIdb':
+            return round(row)
+        else:
+            return -1 if row < 0 else 1
+
+    res['Preds'] = res['R'].apply(get_preds)
+    accuracy = accuracy_score(res['Y'], res['Preds'])
+    
+
+    print('Final Test Accuracy: {:.6f}'.
+          format(accuracy))
+
+
 def visualize(model, graphs, res_dir, data_name, class_values, num=5, sort_by='prediction'):
     model.eval()
-    num = 20
     model.to(device)
     R = []
     Y = []
