@@ -4,7 +4,7 @@ Communicative Subgraph Representation Learning for Multi-Relational Inductive Dr
 ![alt text](https://github.com/Jh-SYSU/CoSMIG/blob/main/framework.jpg "Illustration of CoSMIG")
 
 
-This is the standalone code for our paper: [Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction]()
+This is the standalone code for our paper: [Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction](https://arxiv.org/abs/2205.05957)
 
 ## Requirements
 
@@ -24,7 +24,7 @@ Also you can  install the required packages follow there instructions (tested on
 
 ## Datasets
 
-Data (from DrugBank and DGIdb) could be download from [here](https://github.com/Jh-SYSU/CoSMIG/tree/main/data)
+Please Contact us (raojh6@mail2.sysu.edu.cn) to obtain the Data (from DrugBank and DGIdb) and Splits.
 
 ### Statistic of DGI Dataset
 |Dataset|DrugBank|DGIdb|
@@ -54,6 +54,12 @@ python main.py -h
 ## Reference
 If you find the code useful, please cite our paper.
 ```
+@article{rao2022communicative,
+  title={Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction},
+  author={Rao, Jiahua and Zheng, Shuangjia and Mai, Sijie and Yang, Yuedong},
+  journal={arXiv preprint arXiv:2205.05957},
+  year={2022}
+}
 ```
 
 ## Contact
