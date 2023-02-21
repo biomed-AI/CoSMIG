@@ -54,11 +54,19 @@ python main.py -h
 ## Reference
 If you find the code useful, please cite our paper.
 ```
-@article{rao2022communicative,
-  title={Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction},
-  author={Rao, Jiahua and Zheng, Shuangjia and Mai, Sijie and Yang, Yuedong},
-  journal={arXiv preprint arXiv:2205.05957},
-  year={2022}
+@inproceedings{cosmig,
+  title     = {Communicative Subgraph Representation Learning for Multi-Relational Inductive Drug-Gene Interaction Prediction},
+  author    = {Rao, Jiahua and Zheng, Shuangjia and Mai, Sijie and Yang, Yuedong},
+  booktitle = {Proceedings of the Thirty-First International Joint Conference on
+               Artificial Intelligence, {IJCAI-22}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  editor    = {Lud De Raedt},
+  pages     = {3919--3925},
+  year      = {2022},
+  month     = {7},
+  note      = {Main Track},
+  doi       = {10.24963/ijcai.2022/544},
+  url       = {https://doi.org/10.24963/ijcai.2022/544},
 }
 ```
 
